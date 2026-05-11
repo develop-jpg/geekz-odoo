@@ -101,9 +101,9 @@ class PreorderReservation(models.Model):
     status = fields.Selection(
         selection=[
             ('draft',     'Borrador'),
-            ('active',    'Activa'),
-            ('allocated', 'Stock Asignado'),
-            ('notified',  'Notificado'),
+            ('active',    'En Cola de Espera'),
+            ('allocated', 'Stock Reservado'),
+            ('notified',  'Pendiente de Pago'),
             ('completed', 'Completada'),
             ('expired',   'Expirada'),
             ('cancelled', 'Cancelada'),
@@ -155,8 +155,20 @@ class PreorderReservation(models.Model):
 
     # ── Otros ────────────────────────────────────────────────────────────────
 
+    customer_email = fields.Char(
+        related='customer_id.email',
+        string='Email cliente',
+        readonly=True,
+        store=False,
+    )
     notes = fields.Text(string='Notas internas')
     active = fields.Boolean(default=True)
+    reminder_sent = fields.Boolean(
+        string='Recordatorio enviado',
+        default=False,
+        copy=False,
+        help='Indica si se envió el recordatorio de 24h antes del vencimiento.',
+    )
 
     # ── Constraints SQL ───────────────────────────────────────────────────────
 
@@ -175,7 +187,10 @@ class PreorderReservation(models.Model):
                     self.env['ir.sequence'].next_by_code('preorder.reservation')
                     or _('Nueva')
                 )
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        # Auto-activar reservas creadas desde el backend (estado borrador)
+        records.filtered(lambda r: r.status == 'draft').action_activate()
+        return records
 
     # ── Computed ──────────────────────────────────────────────────────────────
 
@@ -253,7 +268,12 @@ class PreorderReservation(models.Model):
         self._validate_status_transition('active')
         self._check_customer_eligibility()
         self.write({'status': 'active'})
-        self.message_post(body=_('Reserva activada y en cola de espera.'))
+        for rec in self:
+            rec.message_post(body=_(
+                '✅ Reserva confirmada. Cliente añadido a la lista de espera '
+                '(posición #%d).', rec.queue_position
+            ))
+            rec._send_confirmation_email()
 
     def action_allocate(self):
         self._validate_status_transition('allocated')
@@ -261,7 +281,7 @@ class PreorderReservation(models.Model):
             'status': 'allocated',
             'allocation_date': fields.Datetime.now(),
         })
-        self.message_post(body=_('Stock asignado a esta reserva.'))
+        self.message_post(body=_('📦 Stock reservado en bodega para este cliente.'))
 
     def action_notify(self):
         self._validate_status_transition('notified')
@@ -270,24 +290,32 @@ class PreorderReservation(models.Model):
             rec.write({
                 'status': 'notified',
                 'expiration_date': expiry,
+                'reminder_sent': False,
             })
             rec._send_allocation_email()
-            rec.message_post(
-                body=_('Notificación enviada al cliente. Vence: %s') % expiry.strftime('%d/%m/%Y %H:%M')
-            )
+            rec.message_post(body=_(
+                '📧 Cliente notificado por email. Tiene hasta el %s para '
+                'completar el pago, de lo contrario el stock se libera al siguiente en cola.',
+                expiry.strftime('%d/%m/%Y %H:%M')
+            ))
 
     def action_expire(self):
         self._validate_status_transition('expired')
         self.write({'status': 'expired'})
         for rec in self:
             rec.customer_id.sudo()._preorder_increment_expired()
-            rec.message_post(body=_('Reserva expirada: el cliente no completó el pago a tiempo.'))
+            rec.message_post(body=_(
+                '⏰ Reserva expirada. El cliente no completó el pago dentro del plazo. '
+                'El stock fue liberado para el siguiente cliente en cola.'
+            ))
         self._trigger_reallocation()
 
     def action_cancel(self):
         self._validate_status_transition('cancelled')
         self.write({'status': 'cancelled'})
-        self.message_post(body=_('Reserva cancelada.'))
+        self.message_post(body=_(
+            '🚫 Reserva cancelada. El stock fue liberado para el siguiente cliente en cola.'
+        ))
         self._trigger_reallocation()
 
     def action_complete(self):
@@ -298,9 +326,10 @@ class PreorderReservation(models.Model):
         })
         for rec in self:
             rec.customer_id.sudo()._preorder_increment_completed()
-            rec.message_post(
-                body=_('Reserva completada. Orden: %s') % (rec.sale_order_id.name or '—')
-            )
+            rec.message_post(body=_(
+                '🎉 Preventa completada exitosamente. Orden de venta generada: %s.',
+                rec.sale_order_id.name or '—'
+            ))
 
     def action_create_sale_order(self):
         """Convert an allocated/notified reservation to a real sale.order."""
@@ -329,7 +358,36 @@ class PreorderReservation(models.Model):
             'target': 'current',
         }
 
+    def action_resend_email(self):
+        """Reenvía el email de notificación de stock al cliente."""
+        self.ensure_one()
+        if self.status != 'notified':
+            raise UserError(_('Solo se puede reenviar el email en estado "Pendiente de Pago".'))
+        self._send_allocation_email()
+        self.message_post(body=_('📧 Email de notificación reenviado al cliente (%s).', self.customer_id.email))
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Email reenviado'),
+                'message': _('Se reenvió la notificación a %s.') % self.customer_id.email,
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
     # ── Notificaciones ────────────────────────────────────────────────────────
+
+    def _send_confirmation_email(self):
+        self.ensure_one()
+        template = self.env.ref(
+            'geekz_preorders.email_template_preorder_confirmed',
+            raise_if_not_found=False,
+        )
+        if template:
+            template.send_mail(self.id, force_send=True, raise_exception=False)
+        else:
+            _logger.warning('Email template geekz_preorders.email_template_preorder_confirmed not found')
 
     def _send_allocation_email(self):
         self.ensure_one()
@@ -444,6 +502,34 @@ class PreorderReservation(models.Model):
                 res.action_notify()
             except Exception as exc:
                 _logger.error('Cron notify: error on reservation %s: %s', res.name, exc)
+
+    @api.model
+    def _cron_remind_expiring_soon(self):
+        """Hourly: send reminder email to reservations expiring within 24 hours."""
+        now = fields.Datetime.now()
+        deadline = now + timedelta(hours=24)
+        expiring = self.search([
+            ('status', '=', 'notified'),
+            ('expiration_date', '>', now),
+            ('expiration_date', '<=', deadline),
+            ('reminder_sent', '=', False),
+        ])
+        for res in expiring:
+            try:
+                template = self.env.ref(
+                    'geekz_preorders.email_template_preorder_reminder',
+                    raise_if_not_found=False,
+                )
+                if template:
+                    template.send_mail(res.id, force_send=True, raise_exception=False)
+                res.write({'reminder_sent': True})
+                res.message_post(body=_(
+                    '⚠️ Recordatorio de vencimiento enviado al cliente. '
+                    'La reserva expira en menos de 24 horas.'
+                ))
+                _logger.info('Reminder sent for reservation %s', res.name)
+            except Exception as exc:
+                _logger.error('Error sending reminder for reservation %s: %s', res.name, exc)
 
     @api.model
     def _cron_cleanup_old_reservations(self):

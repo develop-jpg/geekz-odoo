@@ -151,4 +151,83 @@
         <field name="auto_delete">True</field>
     </record>
 
+
+    <!-- ── Template: Recordatorio 24h antes de vencer ─────────────────── -->
+
+    <record id="email_template_preorder_reminder" model="mail.template">
+        <field name="name">GeekZ Preventa - Recordatorio de Vencimiento</field>
+        <field name="model_id" ref="model_preorder_reservation"/>
+        <field name="subject">⏰ Último aviso: tu preventa vence mañana — {{ object.product_id.name }}</field>
+        <field name="email_from">{{ (object.company_id.email or 'ventas@geekz.cl') }}</field>
+        <field name="email_to">{{ object.customer_id.email }}</field>
+        <field name="lang">{{ object.customer_id.lang }}</field>
+        <field name="body_html"><![CDATA[
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 24px;">
+
+    <div style="background: #1a1a2e; border-radius: 12px 12px 0 0; padding: 24px; text-align: center;">
+        <h1 style="color: #FFCB05; margin: 0; font-size: 1.6rem; letter-spacing: 1px;">GEEKZ</h1>
+        <p style="color: #adb5bd; margin: 6px 0 0; font-size: 0.9rem;">Recordatorio de Preventa</p>
+    </div>
+
+    <div style="background: #ffffff; padding: 32px; border-left: 4px solid #dc3545;">
+
+        <p style="font-size: 1.1rem; color: #1a1a2e;">
+            Hola, <strong>{{ object.customer_id.name }}</strong>
+        </p>
+
+        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <p style="margin: 0; color: #856404; font-weight: bold; font-size: 1rem;">
+                ⚠️ Tu reserva vence en menos de 24 horas
+            </p>
+            <p style="margin: 8px 0 0; color: #856404; font-size: 0.9rem;">
+                Si no completas el pago antes de la fecha indicada, el stock será reasignado
+                automáticamente al siguiente cliente en lista de espera.
+            </p>
+        </div>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #6c757d; font-size: 0.9rem;">Referencia</td>
+                    <td style="padding: 8px 0; font-weight: bold; text-align: right;">{{ object.name }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #6c757d; font-size: 0.9rem;">Producto</td>
+                    <td style="padding: 8px 0; font-weight: bold; text-align: right;">{{ object.product_id.name }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #6c757d; font-size: 0.9rem;">Cantidad</td>
+                    <td style="padding: 8px 0; font-weight: bold; text-align: right;">{{ object.quantity }} unidad(es)</td>
+                </tr>
+                <tr style="border-top: 2px solid #dc3545;">
+                    <td style="padding: 12px 0 8px; color: #dc3545; font-weight: bold;">⏰ Vence el</td>
+                    <td style="padding: 12px 0 8px; font-weight: bold; color: #dc3545; text-align: right;">
+                        {{ object.expiration_date and object.expiration_date.strftime('%d/%m/%Y %H:%M') or 'Por definir' }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="{{ ctx.get('base_url', '') }}/preorder/checkout/{{ object.id }}"
+               style="background: #dc3545; color: #ffffff; text-decoration: none;
+                      padding: 14px 36px; border-radius: 8px; font-weight: bold;
+                      font-size: 1rem; display: inline-block;">
+                ✅ Completar mi compra ahora
+            </a>
+        </div>
+
+    </div>
+
+    <div style="background: #1a1a2e; border-radius: 0 0 12px 12px; padding: 16px; text-align: center;">
+        <p style="color: #6c757d; font-size: 0.8rem; margin: 0;">
+            GEEKZ SPA — ventas@geekz.cl — www.geekz.cl
+        </p>
+    </div>
+
+</div>
+        ]]></field>
+        <field name="auto_delete">True</field>
+    </record>
+
 </odoo>

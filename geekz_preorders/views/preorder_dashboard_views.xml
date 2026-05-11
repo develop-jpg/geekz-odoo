@@ -54,26 +54,41 @@
                     </div>
 
                     <!-- ── Métricas clave ────────────────────────────────────── -->
-                    <group string="Métricas Clave">
+                    <group string="Métricas de Rendimiento">
                         <group>
-                            <field name="conversion_rate"
-                                   string="Tasa de conversión (%)" readonly="1"/>
-                            <field name="avg_days_to_payment"
-                                   string="Días promedio hasta pago" readonly="1"/>
-                            <field name="pending_stock_units"
-                                   string="Unidades en cola de espera" readonly="1"/>
+                            <field name="conversion_rate" readonly="1"
+                                   help="% de reservas terminales que resultaron en venta"/>
+                            <field name="avg_days_to_payment" readonly="1"
+                                   help="Días promedio entre asignación de stock y pago confirmado"/>
+                        </group>
+                        <group>
+                            <field name="pending_stock_units" readonly="1"
+                                   help="Total de unidades solicitadas por clientes en cola de espera"/>
                         </group>
                     </group>
 
                     <!-- ── Rankings ─────────────────────────────────────────── -->
-                    <group>
-                        <group string="Top 5 Productos más Reservados">
-                            <field name="top_products_text" nolabel="1" readonly="1"/>
-                        </group>
-                        <group string="Top 5 Clientes con más Expiraciones">
-                            <field name="top_expired_customers_text" nolabel="1" readonly="1"/>
-                        </group>
-                    </group>
+                    <div class="o_horizontal_separator mt16 mb8">Rankings</div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card border-0 bg-light p-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fa fa-trophy text-warning me-1"/> Top 5 Productos más Reservados
+                                </h6>
+                                <field name="top_products_text" nolabel="1" readonly="1"
+                                       style="white-space: pre-line; font-size: 0.9rem;"/>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card border-0 bg-light p-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fa fa-exclamation-triangle text-danger me-1"/> Top 5 Clientes con más Expiraciones
+                                </h6>
+                                <field name="top_expired_customers_text" nolabel="1" readonly="1"
+                                       style="white-space: pre-line; font-size: 0.9rem;"/>
+                            </div>
+                        </div>
+                    </div>
 
                 </sheet>
             </form>

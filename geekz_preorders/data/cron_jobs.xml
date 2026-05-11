@@ -27,7 +27,20 @@
         <field name="priority">10</field>
     </record>
 
-    <!-- ── Cron 3: Limpieza de registros antiguos — mensual ───────────── -->
+    <!-- ── Cron 3: Recordatorio 24h antes de vencer — cada hora ─────── -->
+
+    <record id="cron_remind_expiring_soon" model="ir.cron">
+        <field name="name">GeekZ Preventas: Recordatorio de vencimiento próximo</field>
+        <field name="model_id" ref="model_preorder_reservation"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_remind_expiring_soon()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active">True</field>
+        <field name="priority">8</field>
+    </record>
+
+    <!-- ── Cron 4: Limpieza de registros antiguos — mensual ───────────── -->
 
     <record id="cron_cleanup_old_reservations" model="ir.cron">
         <field name="name">GeekZ Preventas: Archivar reservas antiguas</field>

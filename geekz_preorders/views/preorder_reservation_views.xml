@@ -69,6 +69,7 @@
                   default_order="reservation_date asc">
                 <field name="name"/>
                 <field name="customer_id"/>
+                <field name="customer_email" widget="email" optional="show"/>
                 <field name="product_id"/>
                 <field name="quantity"/>
                 <field name="status" widget="badge"
@@ -79,12 +80,15 @@
                 <field name="queue_position" string="Cola #"
                        optional="show"/>
                 <field name="reservation_date" string="Fecha Reserva"/>
-                <field name="expiration_date" string="Vencimiento"
+                <field name="expiration_date" string="Vence"
                        optional="show"/>
-                <field name="allocation_date" string="Asignado"
-                       optional="hide"/>
+                <field name="days_until_expiration" string="Días restantes"
+                       optional="show"
+                       decoration-danger="days_until_expiration &lt;= 1 and status == 'notified'"
+                       decoration-warning="days_until_expiration &lt;= 3 and days_until_expiration &gt; 1 and status == 'notified'"/>
                 <field name="sale_order_id" optional="show"/>
                 <field name="warehouse_id" optional="hide"/>
+                <field name="allocation_date" string="Asignado" optional="hide"/>
                 <field name="company_id" groups="base.group_multi_company"
                        optional="hide"/>
             </list>
@@ -117,11 +121,14 @@
                             type="object" class="btn-success"
                             invisible="status not in ('allocated', 'notified')"
                             confirm="¿Confirmar la creación de la orden de venta? La reserva pasará a 'Completada'."/>
-                    <button name="action_expire" string="Expirar"
+                    <button name="action_expire" string="Marcar como Expirada"
                             type="object" class="btn-warning"
                             invisible="status != 'notified'"
-                            confirm="¿Marcar esta reserva como expirada? Se intentará reasignar el stock."/>
-                    <button name="action_cancel" string="Cancelar"
+                            confirm="¿Marcar esta reserva como expirada? El stock se liberará para el siguiente cliente en cola."/>
+                    <button name="action_resend_email" string="Reenviar Email"
+                            type="object" class="btn-secondary"
+                            invisible="status != 'notified'"/>
+                    <button name="action_cancel" string="Cancelar Reserva"
                             type="object" class="btn-danger"
                             invisible="status in ('completed', 'expired', 'cancelled')"
                             confirm="¿Cancelar esta reserva? El stock quedará disponible para otros clientes."/>
@@ -131,21 +138,33 @@
 
                 <sheet>
                     <!-- Alertas de estado -->
+                    <div class="alert alert-danger" role="alert"
+                         invisible="status != 'notified' or days_until_expiration > 1">
+                        <strong>🚨 Vence hoy:</strong>
+                        El cliente tiene solo <field name="days_until_expiration" readonly="1"/> día(s) para completar el pago.
+                    </div>
                     <div class="alert alert-warning" role="alert"
-                         invisible="status != 'notified' or days_until_expiration > 2">
+                         invisible="status != 'notified' or days_until_expiration &lt;= 1 or days_until_expiration > 3">
                         <strong>⚠️ Vence pronto:</strong>
-                        Esta reserva expira en <field name="days_until_expiration" readonly="1"/> día(s).
+                        El cliente tiene <field name="days_until_expiration" readonly="1"/> día(s) para completar el pago.
                     </div>
                     <div class="alert alert-danger" role="alert"
                          invisible="status != 'expired'">
-                        Esta reserva expiró porque el cliente no completó el pago a tiempo.
+                        <strong>⏰ Reserva expirada.</strong>
+                        El cliente no completó el pago dentro del plazo. El stock fue liberado.
                     </div>
                     <div class="alert alert-success" role="alert"
                          invisible="status != 'completed'">
-                        Reserva completada exitosamente.
+                        <strong>🎉 Preventa completada exitosamente.</strong>
                         <span invisible="not sale_order_id">
-                            Orden: <field name="sale_order_id" readonly="1" nolabel="1"/>
+                            Orden de venta: <field name="sale_order_id" readonly="1" nolabel="1"/>
                         </span>
+                    </div>
+                    <div class="alert alert-info" role="alert"
+                         invisible="status != 'active'">
+                        <strong>🕐 En cola de espera.</strong>
+                        Posición actual: #<field name="queue_position" readonly="1" nolabel="1"/>.
+                        El cliente será notificado automáticamente cuando llegue stock a bodega.
                     </div>
 
                     <!-- Encabezado del formulario -->
