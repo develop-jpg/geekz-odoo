@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_preorder_reservation_manager,preorder.reservation manager,model_preorder_reservation,group_preorder_manager,1,1,1,1
+access_preorder_reservation_user,preorder.reservation user,model_preorder_reservation,group_preorder_user,1,1,1,0
+access_preorder_reservation_portal,preorder.reservation portal,model_preorder_reservation,base.group_portal,1,0,1,0
+access_preorder_allocation_wizard_manager,preorder.stock.allocation.wizard manager,model_preorder_stock_allocation_wizard,group_preorder_manager,1,1,1,1
+access_preorder_allocation_wizard_user,preorder.stock.allocation.wizard user,model_preorder_stock_allocation_wizard,group_preorder_user,1,1,1,0
+access_preorder_dashboard_manager,preorder.dashboard manager,model_preorder_dashboard,group_preorder_manager,1,1,1,1
+access_preorder_dashboard_user,preorder.dashboard user,model_preorder_dashboard,group_preorder_user,1,1,1,0

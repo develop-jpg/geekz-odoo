@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extensión del formulario de contacto: pestaña Preventa -->
+
+    <record id="view_res_partner_preorder" model="ir.ui.view">
+        <field name="name">res.partner.form.preorder</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="Preventas GeekZ" name="preorder_tab">
+
+                    <div invisible="not preorder_blocked"
+                         class="alert alert-danger" role="alert">
+                        <strong>🚫 Cliente bloqueado:</strong>
+                        Este cliente no puede realizar nuevas reservas de preventa.
+                        <button name="action_preorder_unblock" type="object"
+                                string="Desbloquear" class="btn btn-sm btn-warning ms-2"/>
+                    </div>
+
+                    <group>
+                        <group string="Estado Preventa">
+                            <field name="preorder_blocked" readonly="1"/>
+                            <field name="preorder_score" widget="percentage" readonly="1"
+                                   help="Porcentaje de reservas completadas vs expiradas."/>
+                            <field name="preorder_active_count" readonly="1"/>
+                        </group>
+                        <group string="Historial">
+                            <field name="preorder_completed_count" readonly="1"/>
+                            <field name="preorder_expired_count" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <div class="mt-3">
+                        <button name="action_view_preorder_reservations"
+                                string="Ver reservas de este cliente"
+                                type="object" class="btn btn-secondary btn-sm"/>
+                    </div>
+
+                </page>
+            </notebook>
+        </field>
+    </record>
+
+</odoo>

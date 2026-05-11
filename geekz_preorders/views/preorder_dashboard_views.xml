@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  FORM VIEW: Dashboard KPI de Preventas                             -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_dashboard_form" model="ir.ui.view">
+        <field name="name">preorder.dashboard.form</field>
+        <field name="model">preorder.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Dashboard de Preventas" create="false" delete="false">
+
+                <header>
+                    <button name="action_refresh" string="↺ Actualizar KPIs"
+                            type="object" class="btn-primary"/>
+                </header>
+
+                <sheet>
+
+                    <!-- ── Stat buttons (KPIs principales con acceso directo) ── -->
+                    <div class="oe_button_box" name="button_box">
+
+                        <button name="action_open_active" type="object"
+                                class="oe_stat_button" icon="fa-clock-o">
+                            <field name="active_count" widget="statinfo" string="Activas"/>
+                        </button>
+
+                        <button name="action_open_allocated" type="object"
+                                class="oe_stat_button" icon="fa-cubes">
+                            <field name="allocated_count" widget="statinfo" string="Stock Asignado"/>
+                        </button>
+
+                        <button name="action_open_notified" type="object"
+                                class="oe_stat_button" icon="fa-bell">
+                            <field name="notified_count" widget="statinfo" string="Pendientes Pago"/>
+                        </button>
+
+                        <button name="action_open_completed" type="object"
+                                class="oe_stat_button" icon="fa-check-circle">
+                            <field name="completed_count" widget="statinfo" string="Completadas"/>
+                        </button>
+
+                        <button name="action_open_expired" type="object"
+                                class="oe_stat_button" icon="fa-times-circle">
+                            <field name="expired_count" widget="statinfo" string="Expiradas"/>
+                        </button>
+
+                        <button name="action_open_cancelled" type="object"
+                                class="oe_stat_button" icon="fa-ban">
+                            <field name="cancelled_count" widget="statinfo" string="Canceladas"/>
+                        </button>
+
+                    </div>
+
+                    <!-- ── Métricas clave ────────────────────────────────────── -->
+                    <group string="Métricas Clave">
+                        <group>
+                            <field name="conversion_rate"
+                                   string="Tasa de conversión (%)" readonly="1"/>
+                            <field name="avg_days_to_payment"
+                                   string="Días promedio hasta pago" readonly="1"/>
+                            <field name="pending_stock_units"
+                                   string="Unidades en cola de espera" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- ── Rankings ─────────────────────────────────────────── -->
+                    <group>
+                        <group string="Top 5 Productos más Reservados">
+                            <field name="top_products_text" nolabel="1" readonly="1"/>
+                        </group>
+                        <group string="Top 5 Clientes con más Expiraciones">
+                            <field name="top_expired_customers_text" nolabel="1" readonly="1"/>
+                        </group>
+                    </group>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  ACTION                                                             -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="action_preorder_dashboard" model="ir.actions.act_window">
+        <field name="name">Dashboard de Preventas</field>
+        <field name="res_model">preorder.dashboard</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'form_view_initial_mode': 'readonly'}</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  MENÚ PRINCIPAL: GeekZ Preventas                                   -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <menuitem id="menu_preorder_root"
+              name="Preventas"
+              sequence="30"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <!-- ── Dashboard ────────────────────────────────────────────────── -->
+
+    <menuitem id="menu_preorder_dashboard"
+              name="Dashboard"
+              parent="menu_preorder_root"
+              action="action_preorder_dashboard"
+              sequence="1"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <!-- ── Operaciones ───────────────────────────────────────────────── -->
+
+    <menuitem id="menu_preorder_operations"
+              name="Operaciones"
+              parent="menu_preorder_root"
+              sequence="10"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <menuitem id="menu_preorder_all"
+              name="Todas las Reservas"
+              parent="menu_preorder_operations"
+              action="action_preorder_reservation_all"
+              sequence="10"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <menuitem id="menu_preorder_active"
+              name="Reservas Activas"
+              parent="menu_preorder_operations"
+              action="action_preorder_reservation_active"
+              sequence="20"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <menuitem id="menu_preorder_pending_payment"
+              name="Pendientes de Pago"
+              parent="menu_preorder_operations"
+              action="action_preorder_reservation_pending_payment"
+              sequence="30"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <!-- ── Análisis ──────────────────────────────────────────────────── -->
+
+    <menuitem id="menu_preorder_analysis"
+              name="Análisis"
+              parent="menu_preorder_root"
+              sequence="20"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <menuitem id="menu_preorder_pivot"
+              name="Pivot de Preventas"
+              parent="menu_preorder_analysis"
+              action="action_preorder_analysis"
+              sequence="10"
+              groups="geekz_preorders.group_preorder_user"/>
+
+    <!-- ── Configuración ─────────────────────────────────────────────── -->
+
+    <menuitem id="menu_preorder_config"
+              name="Configuración"
+              parent="menu_preorder_root"
+              sequence="90"
+              groups="geekz_preorders.group_preorder_manager"/>
+
+
+</odoo>

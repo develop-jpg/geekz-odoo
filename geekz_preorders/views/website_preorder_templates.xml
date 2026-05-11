@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Botón Preventa en la página de producto (website_sale)            -->
+    <!--  Hereda del template de website_sale e inyecta la sección         -->
+    <!--  de preventa ANTES del formulario de carrito estándar.            -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <template id="preorder_product_section"
+              inherit_id="website_sale.product"
+              name="GeekZ: Sección Preventa en Producto">
+
+        <!-- Inyectar banner de preventa antes de la sección CTA (carrito) -->
+        <!-- En Odoo 19 la sección CTA tiene clase o_wsale_product_details_content_section_cta -->
+        <xpath expr="//div[hasclass('o_wsale_product_details_content_section_cta')]" position="before">
+            <t t-if="product.preorder_enabled">
+                <!-- CSS para ocultar el carrito cuando el producto es preventa -->
+                <style>
+                    .o_wsale_product_details_content_section_cta { display: none !important; }
+                </style>
+
+                <div class="geekz-preorder-section mt-3 mb-3" id="geekz_preorder_box">
+
+                    <!-- Banner informativo -->
+                    <div class="alert mb-3" style="background:#1a1a2e; border:none; border-radius:10px; color:#fff;">
+                        <div class="d-flex align-items-center gap-3">
+                            <span style="font-size:2rem;">&#x1F512;</span>
+                            <div>
+                                <strong style="color:#FFCB05; font-size:1rem;">Producto en Preventa</strong>
+                                <p class="mb-1 mt-1" style="color:#dee2e6; font-size:0.9rem;">
+                                    <t t-esc="product.preorder_message or 'Este producto está disponible en preventa.'"/>
+                                </p>
+                                <div class="d-flex gap-3 flex-wrap mt-2">
+                                    <span t-if="product.preorder_eta" style="color:#FFCB05; font-size:0.85rem;">
+                                        &#x1F4E6; Llegada estimada: <strong><t t-esc="product.preorder_eta"/></strong>
+                                    </span>
+                                    <span style="color:#adb5bd; font-size:0.82rem;">
+                                        &#x1F4CC; Máx. <t t-esc="product.preorder_max_qty_per_customer"/> ud(s) por cliente
+                                    </span>
+                                </div>
+                                <div class="mt-2" style="background:rgba(255,203,5,0.1); border-radius:6px; padding:8px 12px;">
+                                    <small style="color:#FFCB05;">
+                                        &#x26A0;&#xFE0F; <strong>Reserva sin pago.</strong>
+                                        Te notificaremos por email cuando el producto llegue a bodega
+                                        y tendrás 7 días para completar la compra.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de reserva (solo si el usuario está autenticado) -->
+                    <t t-if="not request.env.user._is_public()">
+                        <form action="/preorder/reserve" method="post" class="geekz-preorder-form">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="product_id" t-att-value="product.id"/>
+
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <label class="fw-bold mb-0" style="white-space:nowrap;">Cantidad:</label>
+                                <div class="d-flex align-items-center">
+                                    <button type="button"
+                                            onclick="this.nextElementSibling.stepDown(); this.nextElementSibling.dispatchEvent(new Event('change'))"
+                                            class="btn btn-sm border fw-bold"
+                                            style="width:36px; height:36px; border-radius:8px 0 0 8px !important; background:#f4f4f4;">
+                                        &#8722;
+                                    </button>
+                                    <input type="number" name="quantity"
+                                           value="1" min="1"
+                                           t-att-max="product.preorder_max_qty_per_customer"
+                                           class="form-control form-control-sm text-center border-start-0 border-end-0"
+                                           style="width:60px; height:36px; border-radius:0; font-weight:700;"/>
+                                    <button type="button"
+                                            onclick="this.previousElementSibling.stepUp(); this.previousElementSibling.dispatchEvent(new Event('change'))"
+                                            class="btn btn-sm border fw-bold"
+                                            style="width:36px; height:36px; border-radius:0 8px 8px 0 !important; background:#f4f4f4;">
+                                        &#43;
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-lg w-100 fw-bold"
+                                    style="background:#1a1a2e; color:#FFCB05; border-radius:10px;">
+                                &#x1F6D2; Reservar Preventa
+                            </button>
+                        </form>
+                    </t>
+
+                    <!-- Si no está autenticado: botón de login -->
+                    <t t-else="">
+                        <div class="text-center p-3" style="background:#f8f9fa; border-radius:8px;">
+                            <p class="mb-2 text-muted">Inicia sesión para realizar tu reserva</p>
+                            <a t-attf-href="/web/login?redirect=/shop/product/{{ slug(product.product_tmpl_id) }}"
+                               class="btn btn-primary fw-bold">
+                                Iniciar Sesión para Reservar
+                            </a>
+                        </div>
+                    </t>
+
+                </div>
+            </t>
+        </xpath>
+
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Página: Mis Reservas (portal cliente)                             -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <template id="portal_my_preorders" name="GeekZ: Mis Preventas">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Mis Preventas</t>
+            </t>
+
+            <t t-if="not reservations">
+                <div class="alert alert-info">
+                    No tienes reservas de preventa activas.
+                    <a href="/shop">Explorar productos en preventa</a>
+                </div>
+            </t>
+
+            <t t-if="reservations">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead style="background:#1a1a2e; color:#fff;">
+                            <tr>
+                                <th>Referencia</th>
+                                <th>Producto</th>
+                                <th>Cant.</th>
+                                <th>Estado</th>
+                                <th>Posición</th>
+                                <th>ETA</th>
+                                <th>Vence</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="reservations" t-as="res">
+                                <tr t-attf-class="
+                                    {{ 'table-success' if res.status == 'completed' else '' }}
+                                    {{ 'table-warning' if res.status == 'notified' else '' }}
+                                    {{ 'table-danger' if res.status in ('expired', 'cancelled') else '' }}
+                                ">
+                                    <td><strong><t t-esc="res.name"/></strong></td>
+                                    <td><t t-esc="res.product_id.name"/></td>
+                                    <td><t t-esc="res.quantity"/></td>
+                                    <td>
+                                        <span t-attf-class="badge
+                                            {{ 'bg-success' if res.status == 'completed' else '' }}
+                                            {{ 'bg-primary' if res.status == 'active' else '' }}
+                                            {{ 'bg-info text-dark' if res.status == 'allocated' else '' }}
+                                            {{ 'bg-warning text-dark' if res.status == 'notified' else '' }}
+                                            {{ 'bg-danger' if res.status in ('expired', 'cancelled') else '' }}
+                                            {{ 'bg-secondary' if res.status == 'draft' else '' }}
+                                        ">
+                                            <t t-esc="res.status"/>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <t t-if="res.status == 'active'">#<t t-esc="res.queue_position"/></t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                    <td>
+                                        <t t-if="res.product_tmpl_id.preorder_eta">
+                                            <t t-esc="res.product_tmpl_id.preorder_eta"/>
+                                        </t>
+                                        <t t-else="">Por confirmar</t>
+                                    </td>
+                                    <td>
+                                        <t t-if="res.expiration_date">
+                                            <span t-attf-style="color: {{ '#dc3545' if res.days_until_expiration &lt;= 2 else '#495057' }}">
+                                                <t t-esc="res.expiration_date" t-options='{"widget": "datetime"}'/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                    <td>
+                                        <t t-if="res.status == 'notified'">
+                                            <a t-attf-href="/preorder/checkout/{{ res.id }}"
+                                               class="btn btn-sm btn-success fw-bold">
+                                                ✅ Pagar ahora
+                                            </a>
+                                            <form t-attf-action="/preorder/cancel/{{ res.id }}"
+                                                  method="post" style="display:inline;">
+                                                <input type="hidden" name="csrf_token"
+                                                       t-att-value="request.csrf_token()"/>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger ms-1"
+                                                        onclick="return confirm('¿Cancelar esta reserva?')">
+                                                    Cancelar
+                                                </button>
+                                            </form>
+                                        </t>
+                                        <t t-elif="res.status == 'active'">
+                                            <form t-attf-action="/preorder/cancel/{{ res.id }}"
+                                                  method="post">
+                                                <input type="hidden" name="csrf_token"
+                                                       t-att-value="request.csrf_token()"/>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                        onclick="return confirm('¿Cancelar esta reserva?')">
+                                                    Cancelar
+                                                </button>
+                                            </form>
+                                        </t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Página: Confirmación de reserva exitosa                           -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <template id="preorder_confirmed_page" name="GeekZ: Reserva Confirmada">
+        <t t-call="website.layout">
+            <div id="wrap">
+                <div class="container py-5" style="max-width: 600px;">
+                    <div class="text-center p-5 rounded-3 shadow"
+                         style="background:#1a1a2e; color:#fff;">
+                        <div style="font-size: 4rem;">🎉</div>
+                        <h2 class="fw-bold mt-3" style="color:#FFCB05;">¡Reserva Confirmada!</h2>
+                        <p style="color:#dee2e6;" class="mt-3">
+                            Tu reserva <strong><t t-esc="reservation.name"/></strong> para
+                            <strong><t t-esc="reservation.product_id.name"/></strong>
+                            (<t t-esc="reservation.quantity"/> ud.) ha sido registrada exitosamente.
+                        </p>
+                        <p style="color:#adb5bd; font-size:0.9rem;">
+                            Estás en la posición
+                            <strong style="color:#FFCB05;">#<t t-esc="reservation.queue_position"/></strong>
+                            de la lista de espera.
+                            Te enviaremos un email a
+                            <strong><t t-esc="reservation.customer_id.email"/></strong>
+                            cuando el producto llegue a bodega.
+                        </p>
+                        <div class="mt-4 d-flex justify-content-center gap-3">
+                            <a href="/preorder/my" class="btn btn-warning fw-bold">
+                                Ver mis preventas
+                            </a>
+                            <a href="/shop" class="btn btn-outline-light">
+                                Seguir comprando
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Link en portal sidebar                                            -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <template id="portal_my_preorders_entry" inherit_id="portal.portal_my_home"
+              name="GeekZ: Mis Preventas en Portal">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Mis Preventas</t>
+                <t t-set="url">/preorder/my</t>
+                <t t-set="placeholder_count">preorder_count</t>
+            </t>
+        </xpath>
+    </template>
+
+</odoo>

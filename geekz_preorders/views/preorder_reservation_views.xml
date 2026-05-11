@@ -1,0 +1,324 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  SEARCH VIEW                                                       -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_reservation_search" model="ir.ui.view">
+        <field name="name">preorder.reservation.search</field>
+        <field name="model">preorder.reservation</field>
+        <field name="arch" type="xml">
+            <search string="Reservas de Preventa">
+                <field name="name" string="Referencia"/>
+                <field name="customer_id"/>
+                <field name="product_id"/>
+                <field name="product_tmpl_id" string="Template"/>
+                <!-- Filtros rápidos -->
+                <filter name="active_reservations" string="Activas"
+                        domain="[('status','=','active')]"/>
+                <filter name="allocated" string="Stock Asignado"
+                        domain="[('status','=','allocated')]"/>
+                <filter name="notified" string="Notificadas"
+                        domain="[('status','=','notified')]"/>
+                <filter name="completed" string="Completadas"
+                        domain="[('status','=','completed')]"/>
+                <filter name="expired" string="Expiradas"
+                        domain="[('status','=','expired')]"/>
+                <filter name="cancelled" string="Canceladas"
+                        domain="[('status','=','cancelled')]"/>
+                <separator/>
+                <filter name="pending_payment" string="Pendientes de pago"
+                        domain="[('status','in',['allocated','notified'])]"/>
+                <filter name="expiring_soon" string="Vencen en 48h"
+                        domain="[('status','=','notified'),
+                                 ('expiration_date','&lt;=',
+                                  (datetime.datetime.now()+datetime.timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <separator/>
+                <filter name="archived" string="Archivadas" domain="[('active','=',False)]"/>
+                <!-- Agrupar -->
+                <group>
+                    <filter name="group_status" string="Estado"
+                            context="{'group_by': 'status'}"/>
+                    <filter name="group_product" string="Producto"
+                            context="{'group_by': 'product_tmpl_id'}"/>
+                    <filter name="group_customer" string="Cliente"
+                            context="{'group_by': 'customer_id'}"/>
+                    <filter name="group_date" string="Fecha de Reserva"
+                            context="{'group_by': 'reservation_date:month'}"/>
+                    <filter name="group_warehouse" string="Bodega"
+                            context="{'group_by': 'warehouse_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TREE / LIST VIEW                                                  -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_reservation_tree" model="ir.ui.view">
+        <field name="name">preorder.reservation.tree</field>
+        <field name="model">preorder.reservation</field>
+        <field name="arch" type="xml">
+            <list string="Reservas de Preventa"
+                  decoration-success="status == 'completed'"
+                  decoration-info="status in ('active', 'allocated')"
+                  decoration-warning="status == 'notified'"
+                  decoration-danger="status in ('expired', 'cancelled')"
+                  default_order="reservation_date asc">
+                <field name="name"/>
+                <field name="customer_id"/>
+                <field name="product_id"/>
+                <field name="quantity"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'completed'"
+                       decoration-info="status in ('active', 'allocated')"
+                       decoration-warning="status == 'notified'"
+                       decoration-danger="status in ('expired', 'cancelled')"/>
+                <field name="queue_position" string="Cola #"
+                       optional="show"/>
+                <field name="reservation_date" string="Fecha Reserva"/>
+                <field name="expiration_date" string="Vencimiento"
+                       optional="show"/>
+                <field name="allocation_date" string="Asignado"
+                       optional="hide"/>
+                <field name="sale_order_id" optional="show"/>
+                <field name="warehouse_id" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company"
+                       optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  FORM VIEW                                                         -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_reservation_form" model="ir.ui.view">
+        <field name="name">preorder.reservation.form</field>
+        <field name="model">preorder.reservation</field>
+        <field name="arch" type="xml">
+            <form string="Reserva de Preventa">
+
+                <!-- Barra de estado -->
+                <header>
+                    <button name="action_activate" string="Activar"
+                            type="object" class="btn-primary"
+                            invisible="status != 'draft'"/>
+                    <button name="action_allocate" string="Asignar Stock"
+                            type="object" class="btn-primary"
+                            invisible="status != 'active'"/>
+                    <button name="action_notify" string="Notificar Cliente"
+                            type="object" class="btn-primary"
+                            invisible="status != 'allocated'"/>
+                    <button name="action_create_sale_order"
+                            string="Generar Orden de Venta"
+                            type="object" class="btn-success"
+                            invisible="status not in ('allocated', 'notified')"
+                            confirm="¿Confirmar la creación de la orden de venta? La reserva pasará a 'Completada'."/>
+                    <button name="action_expire" string="Expirar"
+                            type="object" class="btn-warning"
+                            invisible="status != 'notified'"
+                            confirm="¿Marcar esta reserva como expirada? Se intentará reasignar el stock."/>
+                    <button name="action_cancel" string="Cancelar"
+                            type="object" class="btn-danger"
+                            invisible="status in ('completed', 'expired', 'cancelled')"
+                            confirm="¿Cancelar esta reserva? El stock quedará disponible para otros clientes."/>
+                    <field name="status" widget="statusbar"
+                           statusbar_visible="draft,active,allocated,notified,completed"/>
+                </header>
+
+                <sheet>
+                    <!-- Alertas de estado -->
+                    <div class="alert alert-warning" role="alert"
+                         invisible="status != 'notified' or days_until_expiration > 2">
+                        <strong>⚠️ Vence pronto:</strong>
+                        Esta reserva expira en <field name="days_until_expiration" readonly="1"/> día(s).
+                    </div>
+                    <div class="alert alert-danger" role="alert"
+                         invisible="status != 'expired'">
+                        Esta reserva expiró porque el cliente no completó el pago a tiempo.
+                    </div>
+                    <div class="alert alert-success" role="alert"
+                         invisible="status != 'completed'">
+                        Reserva completada exitosamente.
+                        <span invisible="not sale_order_id">
+                            Orden: <field name="sale_order_id" readonly="1" nolabel="1"/>
+                        </span>
+                    </div>
+
+                    <!-- Encabezado del formulario -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Información Principal">
+                            <field name="customer_id"
+                                   readonly="status not in ('draft',)"/>
+                            <field name="product_id"
+                                   readonly="status not in ('draft',)"/>
+                            <field name="quantity"
+                                   readonly="status not in ('draft', 'active')"/>
+                            <field name="warehouse_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Estado y Fechas">
+                            <field name="reservation_date" readonly="1"/>
+                            <field name="allocation_date" readonly="1"
+                                   invisible="not allocation_date"/>
+                            <field name="expiration_date"
+                                   invisible="not expiration_date"/>
+                            <field name="completion_date" readonly="1"
+                                   invisible="not completion_date"/>
+                            <field name="queue_position" readonly="1"
+                                   invisible="status != 'active'"/>
+                            <field name="days_until_expiration" readonly="1"
+                                   invisible="status != 'notified'"/>
+                        </group>
+                    </group>
+
+                    <group string="Vínculos">
+                        <field name="sale_order_id" readonly="1"/>
+                    </group>
+
+                    <group string="Notas">
+                        <field name="notes" nolabel="1" placeholder="Notas internas (no visibles para el cliente)..."/>
+                    </group>
+
+                </sheet>
+
+                <!-- Chatter -->
+                <chatter/>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  KANBAN VIEW                                                       -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_reservation_kanban" model="ir.ui.view">
+        <field name="name">preorder.reservation.kanban</field>
+        <field name="model">preorder.reservation</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="status" class="o_kanban_small_column"
+                    group_create="0" quick_create="0">
+                <field name="name"/>
+                <field name="customer_id"/>
+                <field name="product_id"/>
+                <field name="quantity"/>
+                <field name="status"/>
+                <field name="reservation_date"/>
+                <field name="expiration_date"/>
+                <field name="days_until_expiration"/>
+                <field name="queue_position"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_record_top">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </strong>
+                                </div>
+                                <div class="o_kanban_record_top_right">
+                                    <span t-if="record.queue_position.value &gt; 0"
+                                          class="badge bg-secondary">
+                                        #<t t-esc="record.queue_position.value"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div><i class="fa fa-user"/> <t t-esc="record.customer_id.value"/></div>
+                                <div><i class="fa fa-box"/> <t t-esc="record.product_id.value"/></div>
+                                <div><i class="fa fa-hashtag"/> Cant: <t t-esc="record.quantity.value"/></div>
+                                <div t-if="record.expiration_date.value">
+                                    <span t-attf-class="badge #{record.days_until_expiration.value &lt;= 2 ? 'bg-danger' : 'bg-warning text-dark'}">
+                                        Vence: <t t-esc="record.expiration_date.value"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <div class="oe_kanban_bottom_left text-muted" style="font-size: 0.8rem;">
+                                    <i class="fa fa-clock-o"/> <t t-esc="record.reservation_date.value"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  PIVOT VIEW (análisis)                                             -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_reservation_pivot" model="ir.ui.view">
+        <field name="name">preorder.reservation.pivot</field>
+        <field name="model">preorder.reservation</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Preventas" disable_linking="0">
+                <field name="product_tmpl_id" type="row"/>
+                <field name="status" type="col"/>
+                <field name="quantity" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  GRAPH VIEW                                                        -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_preorder_reservation_graph" model="ir.ui.view">
+        <field name="name">preorder.reservation.graph</field>
+        <field name="model">preorder.reservation</field>
+        <field name="arch" type="xml">
+            <graph string="Reservas de Preventa" type="bar" stacked="1">
+                <field name="reservation_date" type="row" interval="month"/>
+                <field name="status" type="col"/>
+                <field name="quantity" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  ACCIONES                                                          -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+
+    <record id="action_preorder_reservation_all" model="ir.actions.act_window">
+        <field name="name">Todas las Reservas</field>
+        <field name="res_model">preorder.reservation</field>
+        <field name="view_mode">tree,form,kanban,pivot,graph</field>
+        <field name="search_view_id" ref="view_preorder_reservation_search"/>
+        <field name="context">{'search_default_active_reservations': 1}</field>
+    </record>
+
+    <record id="action_preorder_reservation_active" model="ir.actions.act_window">
+        <field name="name">Reservas Activas</field>
+        <field name="res_model">preorder.reservation</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="domain">[('status', 'in', ['active', 'allocated', 'notified'])]</field>
+        <field name="search_view_id" ref="view_preorder_reservation_search"/>
+    </record>
+
+    <record id="action_preorder_reservation_pending_payment" model="ir.actions.act_window">
+        <field name="name">Pendientes de Pago</field>
+        <field name="res_model">preorder.reservation</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('status', 'in', ['allocated', 'notified'])]</field>
+    </record>
+
+    <record id="action_preorder_analysis" model="ir.actions.act_window">
+        <field name="name">Análisis de Preventas</field>
+        <field name="res_model">preorder.reservation</field>
+        <field name="view_mode">pivot,graph,tree</field>
+        <field name="search_view_id" ref="view_preorder_reservation_search"/>
+    </record>
+
+</odoo>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_preorder_stock_allocation_wizard_form" model="ir.ui.view">
+        <field name="name">preorder.stock.allocation.wizard.form</field>
+        <field name="model">preorder.stock.allocation.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Asignación Manual de Stock a Preventas">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        <strong>ℹ️ Asignación Manual</strong><br/>
+                        Ejecuta el algoritmo FIFO de asignación de stock para el producto seleccionado.
+                        Solo asigna si hay stock disponible en bodega. Los clientes serán notificados por email.
+                    </div>
+
+                    <group>
+                        <group string="Selección">
+                            <field name="product_tmpl_id"/>
+                            <field name="product_id"
+                                   domain="[('product_tmpl_id', '=', product_tmpl_id)]"/>
+                            <field name="warehouse_id"/>
+                        </group>
+                        <group string="Estado Actual">
+                            <field name="available_qty" readonly="1"/>
+                            <field name="pending_reservations" readonly="1"/>
+                            <field name="pending_qty_total" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-warning" role="alert"
+                         invisible="available_qty > 0 or not product_id">
+                        ⚠️ Sin stock disponible en bodega para este producto.
+                    </div>
+
+                    <div class="alert alert-warning" role="alert"
+                         invisible="pending_reservations > 0 or not product_id">
+                        ⚠️ No hay reservas activas en cola para este producto.
+                    </div>
+
+                </sheet>
+                <footer>
+                    <button name="action_run_allocation"
+                            string="Ejecutar Asignación FIFO"
+                            type="object" class="btn-primary"
+                            invisible="available_qty &lt;= 0 or pending_reservations &lt;= 0"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_preorder_stock_allocation_wizard" model="ir.actions.act_window">
+        <field name="name">Asignación Manual de Stock</field>
+        <field name="res_model">preorder.stock.allocation.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Agregar al menú de operaciones -->
+    <menuitem id="menu_preorder_manual_allocation"
+              name="Asignación Manual de Stock"
+              parent="menu_preorder_operations"
+              action="action_preorder_stock_allocation_wizard"
+              sequence="40"
+              groups="geekz_preorders.group_preorder_manager"/>
+
+</odoo>

@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Odoo
+*.zip
+*.tar.gz
+
+# Docker (entorno local, no va al repo de Odoo.sh)
+docker/
+docker-compose.yml
+
+# Scripts locales de administración (no son módulos Odoo)
+*.py
+!geekz_preorders/**/*.py
+
+# Configuración local
+config/
+.env
+*.conf
+
+# Claude memory
+.claude/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

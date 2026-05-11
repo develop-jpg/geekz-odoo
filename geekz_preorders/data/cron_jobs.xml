@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── Cron 1: Expiración automática — cada hora ───────────────────── -->
+
+    <record id="cron_expire_reservations" model="ir.cron">
+        <field name="name">GeekZ Preventas: Expirar reservas vencidas</field>
+        <field name="model_id" ref="model_preorder_reservation"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_expire_reservations()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active">True</field>
+        <field name="priority">5</field>
+    </record>
+
+    <!-- ── Cron 2: Renotificar asignadas — cada hora ───────────────────── -->
+
+    <record id="cron_notify_pending_allocated" model="ir.cron">
+        <field name="name">GeekZ Preventas: Notificar reservas asignadas pendientes</field>
+        <field name="model_id" ref="model_preorder_reservation"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_notify_pending_allocated()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active">True</field>
+        <field name="priority">10</field>
+    </record>
+
+    <!-- ── Cron 3: Limpieza de registros antiguos — mensual ───────────── -->
+
+    <record id="cron_cleanup_old_reservations" model="ir.cron">
+        <field name="name">GeekZ Preventas: Archivar reservas antiguas</field>
+        <field name="model_id" ref="model_preorder_reservation"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_cleanup_old_reservations()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">months</field>
+        <field name="active">True</field>
+        <field name="priority">20</field>
+    </record>
+
+</odoo>

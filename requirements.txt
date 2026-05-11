@@ -1,0 +1,2 @@
+# No external Python dependencies required for geekz_preorders.
+# All dependencies are covered by Odoo's standard library.
