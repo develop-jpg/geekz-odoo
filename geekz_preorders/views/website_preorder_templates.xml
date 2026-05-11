@@ -54,7 +54,7 @@
                     <t t-if="not request.env.user._is_public()">
                         <form action="/preorder/reserve" method="post" class="geekz-preorder-form">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                            <input type="hidden" name="product_id" t-att-value="product.id"/>
+                            <input type="hidden" name="product_id" t-att-value="product.product_variant_id.id"/>
 
                             <div class="d-flex align-items-center gap-2 mb-3">
                                 <label class="fw-bold mb-0" style="white-space:nowrap;">Cantidad:</label>
@@ -90,7 +90,7 @@
                     <t t-else="">
                         <div class="text-center p-3" style="background:#f8f9fa; border-radius:8px;">
                             <p class="mb-2 text-muted">Inicia sesión para realizar tu reserva</p>
-                            <a t-attf-href="/web/login?redirect=/shop/product/{{ slug(product.product_tmpl_id) }}"
+                            <a t-attf-href="/web/login?redirect=/shop/product/{{ slug(product) }}"
                                class="btn btn-primary fw-bold">
                                 Iniciar Sesión para Reservar
                             </a>
